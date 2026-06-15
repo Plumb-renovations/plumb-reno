@@ -1609,14 +1609,30 @@ const D3_TILECOLS=[['#ffffff','White'],['#f4f1ea','Warm White'],['#e7dcc8','Sand
 const D3_TILESZ=[[600,600,'600×600'],[300,600,'300×600'],[100,300,'Subway'],[75,300,'Kit-Kat'],[600,1200,'Large'],[200,200,'200 Sq']];
 const D3_LAYS=[['stack','Stacked'],['brick','Brick Bond'],['herr','Herringbone'],['vert','Vert Stack'],['fish','Fishscale']];
 const D3_FINISHES=[['Chrome',0xc9ced4],['Brushed Nickel',0xb6ad9e],['Brushed Brass',0xb08d57],['Gun Metal',0x44494f],['Matte Black',0x1c1c1c],['Gold/Brass',0xc9a24a],['White',0xf5f5f5]];
-// metal finish properties (roughness varies — brushed is rougher than chrome)
-const FIN_PROPS={'Chrome':{m:0.95,r:0.12},'Brushed Nickel':{m:0.85,r:0.34},'Brushed Brass':{m:0.82,r:0.36},'Gun Metal':{m:0.88,r:0.28},'Matte Black':{m:0.55,r:0.55},'Gold/Brass':{m:0.9,r:0.2},'White':{m:0.1,r:0.5}};
+// metal finish properties (roughness varies — brushed is rougher than chrome).
+// Extended for PBR realism: m/r kept, plus per-finish colour (col), env-reflection
+// strength (ei) and optional clearcoat (cc/ccr) for the polished metals.
+const FIN_PROPS={
+  'Chrome':        {m:1.0, r:0.06, ei:2.1, col:0xeef2f6, cc:1.0, ccr:0.05},
+  'Brushed Nickel':{m:0.96,r:0.33, ei:1.45,col:0xc7c1b4},
+  'Brushed Brass': {m:0.96,r:0.35, ei:1.55,col:0xb8924f},
+  'Gun Metal':     {m:0.95,r:0.30, ei:1.30,col:0x3b4046},
+  'Matte Black':   {m:0.50,r:0.60, ei:0.65,col:0x161616, cc:0.35, ccr:0.6},
+  'Gold/Brass':    {m:1.0, r:0.17, ei:1.85,col:0xc9a24a, cc:0.55, ccr:0.18},
+  'White':         {m:0.04,r:0.5,  ei:0.55,col:0xf3f3f0}
+};
 // surface finishes for cabinetry/stone (not metal taps)
 const SURF_FINISHES={'White':{c:0xf2f2ee,m:0.04,r:0.45},'Matte White':{c:0xeeeeea,m:0.02,r:0.7},'Timber':{c:0x9c7a52,m:0,r:0.62},'Dark Timber':{c:0x5f4631,m:0,r:0.6},'Stone':{c:0xe8e6e0,m:0.05,r:0.35},'Charcoal':{c:0x3a3d42,m:0.05,r:0.5},'Sage':{c:0x9aa792,m:0.03,r:0.55},'Navy':{c:0x2d3b4d,m:0.04,r:0.5}};
 function d3Surf(name){const s=SURF_FINISHES[name]||SURF_FINISHES['White'];return new _3.MeshStandardMaterial({color:s.c,metalness:s.m,roughness:s.r});}
 
 function d3Mat(c,met,rgh){return new _3.MeshStandardMaterial({color:c,metalness:met??0.1,roughness:rgh??0.6});}
-function d3Metal(fin){const f=D3_FINISHES.find(x=>x[0]===fin)||D3_FINISHES[0];const pr=FIN_PROPS[fin]||{m:0.9,r:0.18};return new _3.MeshStandardMaterial({color:f[1],metalness:pr.m,roughness:pr.r,envMapIntensity:1.25});}
+function d3Metal(fin){
+  const f=D3_FINISHES.find(x=>x[0]===fin)||D3_FINISHES[0];
+  const pr=FIN_PROPS[fin]||{m:0.9,r:0.18};
+  const opts={color:(pr.col!=null?pr.col:f[1]),metalness:pr.m,roughness:pr.r,envMapIntensity:pr.ei!=null?pr.ei:1.25};
+  if(pr.cc){const m=new _3.MeshPhysicalMaterial(opts);m.clearcoat=pr.cc;m.clearcoatRoughness=pr.ccr!=null?pr.ccr:0.1;return m;}
+  return new _3.MeshStandardMaterial(opts);
+}
 function b3x(w,h,d,mat){const m=new _3.Mesh(new _3.BoxGeometry(w,h,d),mat);m.castShadow=true;return m;}
 function c3l(r,h,mat,seg){const m=new _3.Mesh(new _3.CylinderGeometry(r,r,h,seg||24),mat);m.castShadow=true;return m;}
 function rbx(w,h,d,mat,rad){ // rounded/chamfered box via slight bevel illusion using grouped boxes
