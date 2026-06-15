@@ -42,3 +42,18 @@ product priced below cost).
 > Note: the catalogue currently has **723 rows / 666 unique SKUs** — 57 SKUs repeat
 > across finishes/variants. That's expected, not an error; it's tracked in
 > `expected.json` so accidental drift is caught.
+
+## Screenshot harness (Task 1 — optional, needs a browser)
+
+`test/shot.mjs` renders the 3D designer to a PNG in headless Chrome (software
+WebGL). It needs Puppeteer and the locally-vendored Three.js r128 in
+`test/vendor/three.min.js` (cdnjs is blocked in CI):
+
+```bash
+npm i puppeteer            # one-time; downloads Chrome for Testing
+node test/shot.mjs out.png [layout] [orbTh orbPh orbR orbTy] [light]
+```
+
+It injects the vendored Three.js, opens the designer, seeds a demo bathroom via
+the app's own auto-layout, and writes the PNG. Used for before/after comparisons.
+The core gate (`npm run check`) has **no** dependencies and never needs a browser.
