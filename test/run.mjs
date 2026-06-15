@@ -45,7 +45,8 @@ function fnBody(name) {
 const app = loadApp();
 const { CAT, BASE, getBase, fmt, today, pad, qT, iT, iP, priceFor, estTotals, supplierFor,
         FIN_PROPS, D3_FINISHES, S, VANITY_PARTS, d3ItemSkus, vanityAssemblyTotals,
-        benchTakeoff, stoneTakeoffSum, stoneTakeoffKeys, d3BenchSpec } = app;
+        benchTakeoff, stoneTakeoffSum, stoneTakeoffKeys, d3BenchSpec,
+        cabinetryTakeoff, rateOf } = app;
 
 // ── TEST RIG ────────────────────────────────────────────────────────────────
 // formatting / utils
@@ -168,6 +169,45 @@ ok('vanity parts resolve a supplier (never blank)',
   eq('undermount basin -> 1 undermount cut-out', under.undermount, 1);
   const dbl = d3BenchSpec({ def: { id: 'vanity', bw: 1200, bd: 465 }, sty: 'double', components: {} });
   eq('double vanity -> 2 sink cut-outs', dbl.sinks, 2);
+}
+
+// wardrobe + kitchen cabinetry pricing (Task 6) — reuses existing cabinetry rates
+{
+  const rateKeys = new Set();
+  app.RATE_DEFS.forEach(g => g.items.forEach(it => rateKeys.add(it.k)));
+  // wardrobe joinery -> cab_wardrobe lineal metres
+  const wardrobe = [
+    { def: { id: 'hang', bw: 1200 } },
+    { def: { id: 'shelves', bw: 900 } },
+    { def: { id: 'drawers', bw: 900 } },
+    { def: { id: 'mdoor', bw: 600 } },
+  ];
+  const wq = cabinetryTakeoff(wardrobe);
+  approx('wardrobe cabinetry lm = sum of widths', wq.cab_wardrobe, 1.2 + 0.9 + 0.9 + 0.6, 1e-2);
+  ok('wardrobe uses the cab_wardrobe rate key', rateKeys.has('cab_wardrobe'));
+  approx('wardrobe price = lm × rate', wq.cab_wardrobe * rateOf('cab_wardrobe'), 3.6 * rateOf('cab_wardrobe'), 1e-6);
+  // kitchen joinery -> graded base/over/island/tall keys
+  const kitchen = [
+    { def: { id: 'kbench', bw: 1800 } },
+    { def: { id: 'ksink', bw: 800 } },
+    { def: { id: 'island', bw: 1600 } },
+    { def: { id: 'ohead', bw: 1500 } },
+    { def: { id: 'tall', bw: 700 } },
+  ];
+  const kq = cabinetryTakeoff(kitchen);
+  approx('kitchen base run lm (kbench+ksink)', kq.cab_base_lam, 1.8 + 0.8, 1e-2);
+  approx('kitchen island lm', kq.cab_island_lam, 1.6, 1e-2);
+  approx('kitchen overhead lm', kq.cab_over_lam, 1.5, 1e-2);
+  approx('kitchen tall lm', kq.cab_tall_lam, 0.7, 1e-2);
+  ok('all kitchen cabinetry keys exist in RATE_DEFS', Object.keys(kq).every(k => rateKeys.has(k)));
+  // grade switches the rate key
+  const kq2 = cabinetryTakeoff([{ def: { id: 'kbench', bw: 1800 } }], '2pac');
+  ok('grade selects the 2pac rate key', kq2.cab_base_2pac === 1.8 && rateKeys.has('cab_base_2pac'));
+  // item dims override def width
+  eq('drawn width overrides def bw',
+    cabinetryTakeoff([{ def: { id: 'hang', bw: 1200 }, dims: { w: 2400 } }]).cab_wardrobe, 2.4);
+  // non-cabinetry items (e.g. a bathroom vanity) are not charged as cabinetry
+  eq('vanity not counted as cabinetry', Object.keys(cabinetryTakeoff([{ def: { id: 'vanity', bw: 900 } }])).length, 0);
 }
 
 // ── AUDITS ──────────────────────────────────────────────────────────────────

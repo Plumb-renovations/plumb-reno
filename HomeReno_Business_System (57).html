@@ -1867,9 +1867,9 @@ const D3_DEFS=[
  {id:'fwaste',l:'Floor Waste',e:'⬛',rooms:['bathroom','laundry'],wall:0,bw:120,bd:120,bh:8,cats:['Floor Wastes & Grates'],make:f=>{const g=new _3.Group();const p=b3x(.12,.008,.12,d3Metal(f));p.position.y=.005;g.add(p);return g;}},
  {id:'hob',l:'Tiled Hob / Bench',e:'🧱',rooms:['bathroom'],wall:1,bw:800,bd:200,bh:450,cats:[],make:f=>{const g=new _3.Group();const m1=new _3.Mesh(new _3.BoxGeometry(.8,.43,.2),new _3.MeshStandardMaterial({map:d3Tex(D3.wall,.8,.43),roughness:.4}));m1.position.y=.215;m1.castShadow=true;m1.receiveShadow=true;g.add(m1);const cap=b3x(.82,.02,.22,d3Mat(0xeeeae0,.05,.3));cap.position.y=.44;g.add(cap);return g;}},
  {id:'ppoint',l:'Power Point',e:'🔌',rooms:['bathroom','kitchen','laundry','wardrobe'],wall:1,hgt:1000,bw:115,bd:36,bh:75,cats:[],make:f=>{const g=new _3.Group();const pl=b3x(.115,.075,.012,d3Mat(0xffffff,.05,.3));g.add(pl);const sw1=b3x(.02,.03,.016,d3Mat(0xf0f0f0,.05,.3));sw1.position.set(-.025,.012,.004);g.add(sw1);const sw2=sw1.clone();sw2.position.x=.025;g.add(sw2);return g;}},
- {id:'kbench',l:'Bench Run',e:'🧱',rooms:['kitchen'],wall:1,bw:1800,bd:600,bh:900,cats:[],make:f=>{const g=new _3.Group();const cab=b3x(1.8,.84,.58,d3Mat(0x6e7b86,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(1.84,.04,.62,d3Mat(0xe9e6df,.05,.22));top.position.y=.87;g.add(top);return g;}},
- {id:'island',l:'Island Bench',e:'🏝',rooms:['kitchen'],wall:0,bw:1600,bd:900,bh:900,cats:[],make:f=>{const g=new _3.Group();const cab=b3x(1.6,.84,.86,d3Mat(0x4f5b66,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(1.7,.045,.96,d3Mat(0xf0ede6,.05,.2));top.position.y=.87;g.add(top);return g;}},
- {id:'ksink',l:'Sink + Mixer',e:'🚰',rooms:['kitchen','laundry'],wall:1,bw:800,bd:600,bh:950,cats:['Kitchen & Laundry Mixers'],make:f=>{const g=new _3.Group();const cab=b3x(.8,.84,.58,d3Mat(0x6e7b86,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(.84,.04,.62,d3Mat(0xe9e6df,.05,.22));top.position.y=.87;g.add(top);const sink=b3x(.5,.03,.4,d3Mat(0x9aa3aa,.75,.25));sink.position.y=.885;g.add(sink);const tap=c3l(.016,.3,d3Metal(f));tap.position.set(0,1.0,-.22);g.add(tap);const neck=c3l(.013,.22,d3Metal(f));neck.rotation.x=Math.PI/2;neck.position.set(0,1.14,-.12);g.add(neck);return g;}},
+ {id:'kbench',l:'Bench Run',e:'🧱',rooms:['kitchen'],wall:1,bw:1800,bd:600,bh:900,cats:[],make:f=>{const g=new _3.Group();const cab=b3x(1.8,.84,.58,d3Mat(0x6e7b86,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(1.84,.04,.62,d3Surf('Stone'));top.position.y=.87;g.add(top);return g;}},
+ {id:'island',l:'Island Bench',e:'🏝',rooms:['kitchen'],wall:0,bw:1600,bd:900,bh:900,cats:[],make:f=>{const g=new _3.Group();const cab=b3x(1.6,.84,.86,d3Mat(0x4f5b66,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(1.7,.045,.96,d3Surf('Stone'));top.position.y=.87;g.add(top);return g;}},
+ {id:'ksink',l:'Sink + Mixer',e:'🚰',rooms:['kitchen','laundry'],wall:1,bw:800,bd:600,bh:950,cats:['Kitchen & Laundry Mixers'],make:f=>{const g=new _3.Group();const cab=b3x(.8,.84,.58,d3Mat(0x6e7b86,0,.55));cab.position.y=.42;g.add(cab);const top=b3x(.84,.04,.62,d3Surf('Stone'));top.position.y=.87;g.add(top);const sink=b3x(.5,.03,.4,d3Mat(0x9aa3aa,.75,.25));sink.position.y=.885;g.add(sink);const tap=c3l(.016,.3,d3Metal(f));tap.position.set(0,1.0,-.22);g.add(tap);const neck=c3l(.013,.22,d3Metal(f));neck.rotation.x=Math.PI/2;neck.position.set(0,1.14,-.12);g.add(neck);return g;}},
  {id:'ohead',l:'Overhead Cabinets',e:'🗄',rooms:['kitchen','laundry'],wall:1,hgt:1850,bw:1500,bd:350,bh:700,cats:[],make:f=>{const g=new _3.Group();g.add(b3x(1.5,.7,.33,d3Mat(0xf0ede6,0,.45)));return g;}},
  {id:'tall',l:'Fridge / Tall Unit',e:'🧊',rooms:['kitchen'],wall:1,bw:700,bd:650,bh:2100,cats:[],make:f=>{const g=new _3.Group();const u=b3x(.7,2.1,.62,d3Mat(0xb9bfc4,.45,.35));u.position.y=1.05;g.add(u);return g;}},
  {id:'trough',l:'Trough Cabinet',e:'🪣',rooms:['laundry'],wall:1,bw:600,bd:550,bh:900,cats:['Kitchen & Laundry Mixers'],make:f=>{const g=new _3.Group();const cab=b3x(.6,.84,.53,d3Mat(0xeef0f2,0,.45));cab.position.y=.42;g.add(cab);const tr=b3x(.5,.06,.42,d3Mat(0xb9c0c6,.75,.25));tr.position.y=.88;g.add(tr);const tap=c3l(.015,.26,d3Metal(f));tap.position.set(0,1.0,-.2);g.add(tap);return g;}},
@@ -8378,6 +8378,28 @@ function d3BenchSpec(it){
 }
 function d3Benches(){return D3.placed.filter(it=>it.def&&(it.def.id==='vanity'||it.def.bench)).map(d3BenchSpec);}
 function d3StoneTakeoff(){return stoneTakeoffSum(d3Benches());}
+
+// ── KITCHEN / WARDROBE CABINETRY AUTO-TAKEOFF (Task 6) ──
+// Drawn joinery -> lineal metres against the existing Custom Cabinetry rate keys.
+// 'base/over/island/tall' take a grade suffix (lam|2pac|timber|prem); laundry &
+// wardrobe runs use their flat keys.
+const CAB_RATE_BY_DEF={
+  kbench:{base:'cab_base'}, ksink:{base:'cab_base'}, island:{base:'cab_island'},
+  ohead:{base:'cab_over'}, tall:{base:'cab_tall'}, trough:{flat:'cab_laundry'},
+  hang:{flat:'cab_wardrobe'}, shelves:{flat:'cab_wardrobe'}, drawers:{flat:'cab_wardrobe'}, mdoor:{flat:'cab_wardrobe'}
+};
+function cabinetryTakeoff(items,grade){
+  grade=grade||'lam';
+  const q={};
+  (items||[]).forEach(it=>{
+    const map=CAB_RATE_BY_DEF[it.def&&it.def.id];if(!map)return;
+    const lm=((it.dims&&it.dims.w)||(it.def&&it.def.bw)||0)/1000;if(lm<=0)return;
+    const key=map.flat||(map.base+'_'+grade);
+    q[key]=+((q[key]||0)+lm).toFixed(2);
+  });
+  return q;
+}
+function d3CabinetryTakeoff(){return cabinetryTakeoff(D3.placed,(S.settings&&S.settings.cabGrade)||'lam');}
 function d3Quantities(){
   const m=d3Materials();
   const H=D3.H/1000;
@@ -8450,6 +8472,8 @@ function d3Quantities(){
   };
   // stone benchtop auto-takeoff -> feeds the existing stone rate keys
   Object.assign(q, stoneTakeoffKeys(d3StoneTakeoff()));
+  // kitchen / wardrobe cabinetry auto-takeoff -> Custom Cabinetry lineal-metre keys
+  Object.assign(q, d3CabinetryTakeoff());
   return q;
 }
 function d3Estimate(){

@@ -28,6 +28,7 @@ const CAPTURE = [
   'supplierFor', 'estTotals',
   'VANITY_PARTS', 'd3ItemSkus', 'vanityAssemblyTotals',
   'benchTakeoff', 'stoneTakeoffSum', 'stoneTakeoffKeys', 'd3BenchSpec',
+  'cabinetryTakeoff', 'CAB_RATE_BY_DEF', 'rateOf',
 ];
 
 // ── Browser / Three.js stubs ────────────────────────────────────────────────
