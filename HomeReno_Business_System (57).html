@@ -2825,7 +2825,13 @@ function buildVanity(opts){
   const surf=cab&&cab.finish==='White'?'White':'Timber';
   const fin=tap?(tap.finish||'Chrome'):'Chrome';
   const it=d3Add('vanity',{sty,surf,fin,sku:'',quiet:true,wall:opts.wall!=null?opts.wall:0,off:opts.off!=null?opts.off:300});
-  if(it){it.sku=null;it.components=comp;if(typeof d3Select==='function')d3Select(it);d3Quote();}
+  if(it){
+    it.sku=null;it.components=comp;
+    // size the bench to the chosen cabinet so geometry + stone takeoff match
+    const W={'VC-600-WH':600,'VC-750-WH':750,'VC-900-FL':900,'VC-1200-D':1200}[comp.cabinet];
+    if(W){it.dims.w=W;if(it.def.wall)d3PlaceWall(it);else d3PlaceFloor(it);}
+    if(typeof d3Select==='function')d3Select(it);d3Quote();
+  }
   return it;
 }
 function d3VanityBuilderOpts(cat){
@@ -8333,6 +8339,45 @@ function xeroSync(){
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────
 // ═══ COMPLETE RENDER — render-connected estimating engine ═══
+// ── STONE BENCHTOP AUTO-TAKEOFF (Task 5) ──
+// Per-bench metrics: top area (m²), exposed edge (lineal m), waterfall ends,
+// and sink/cooktop cut-outs. b dims are in mm; counts are integers.
+function benchTakeoff(b){
+  const W=(b.w||0)/1000, D=(b.d||0)/1000;
+  const area=W*D;                                   // horizontal slab top
+  const wf=b.waterfalls||0;
+  // exposed polished edge: front run + any ends not taken by a waterfall or wall
+  const edges=(b.exposedEdges!=null)?b.exposedEdges:(W+(2-wf)*D);
+  return {area_m2:+area.toFixed(3), edge_lm:+Math.max(0,edges).toFixed(3), waterfalls:wf,
+          sink_cuts:b.sinks||0, undermount_cuts:b.undermount||0, cooktop_cuts:b.cooktops||0};
+}
+function stoneTakeoffSum(benches){
+  const t={area_m2:0,edge_lm:0,waterfalls:0,sink_cuts:0,undermount_cuts:0,cooktop_cuts:0,benches:0};
+  (benches||[]).forEach(b=>{const x=benchTakeoff(b);
+    t.area_m2+=x.area_m2;t.edge_lm+=x.edge_lm;t.waterfalls+=x.waterfalls;
+    t.sink_cuts+=x.sink_cuts;t.undermount_cuts+=x.undermount_cuts;t.cooktop_cuts+=x.cooktop_cuts;t.benches++;});
+  t.area_m2=+t.area_m2.toFixed(2);t.edge_lm=+t.edge_lm.toFixed(2);
+  return t;
+}
+// map takeoff totals onto the existing Pricing-Setup stone rate keys
+function stoneTakeoffKeys(t){
+  return {stone_20:t.area_m2, stone_edge:t.edge_lm, stone_waterfall:t.waterfalls,
+          stone_cut_sink:t.sink_cuts, stone_cut_under:t.undermount_cuts, stone_cut_cook:t.cooktop_cuts};
+}
+// classify a placed vanity/bench into a bench spec (basin type drives the cut-out)
+function d3BenchSpec(it){
+  const comp=it.components||{};
+  const basin=comp.basin?getBase(comp.basin):null;
+  const bn=basin?basin.name:'';
+  const isUnder=/under/i.test(bn), isAbove=/above/i.test(bn);
+  const count=(it.def.id==='vanity'&&it.sty==='double')?2:(it.benchSinks||1);
+  // above-counter basins sit on top (no cut-out); undermount -> undermount cut; else inset cut
+  const sinks=isAbove?0:(isUnder?0:count), undermount=isUnder?count:0;
+  return {w:(it.dims&&it.dims.w)||it.def.bw||0, d:(it.dims&&it.dims.d)||it.def.bd||0,
+          waterfalls:it.waterfalls||0, sinks, undermount, cooktops:it.cooktops||0};
+}
+function d3Benches(){return D3.placed.filter(it=>it.def&&(it.def.id==='vanity'||it.def.bench)).map(d3BenchSpec);}
+function d3StoneTakeoff(){return stoneTakeoffSum(d3Benches());}
 function d3Quantities(){
   const m=d3Materials();
   const H=D3.H/1000;
@@ -8403,6 +8448,8 @@ function d3Quantities(){
     // demolition
     demo_bath:1,strip_allow:1,skip_bin:1,waste_rem:1
   };
+  // stone benchtop auto-takeoff -> feeds the existing stone rate keys
+  Object.assign(q, stoneTakeoffKeys(d3StoneTakeoff()));
   return q;
 }
 function d3Estimate(){

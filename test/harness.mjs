@@ -27,6 +27,7 @@ const CAPTURE = [
   'iT', 'qT', 'iP', 'autoMkup', 'priceFor',
   'supplierFor', 'estTotals',
   'VANITY_PARTS', 'd3ItemSkus', 'vanityAssemblyTotals',
+  'benchTakeoff', 'stoneTakeoffSum', 'stoneTakeoffKeys', 'd3BenchSpec',
 ];
 
 // ── Browser / Three.js stubs ────────────────────────────────────────────────

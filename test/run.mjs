@@ -44,7 +44,8 @@ function fnBody(name) {
 
 const app = loadApp();
 const { CAT, BASE, getBase, fmt, today, pad, qT, iT, iP, priceFor, estTotals, supplierFor,
-        FIN_PROPS, D3_FINISHES, S, VANITY_PARTS, d3ItemSkus, vanityAssemblyTotals } = app;
+        FIN_PROPS, D3_FINISHES, S, VANITY_PARTS, d3ItemSkus, vanityAssemblyTotals,
+        benchTakeoff, stoneTakeoffSum, stoneTakeoffKeys, d3BenchSpec } = app;
 
 // ── TEST RIG ────────────────────────────────────────────────────────────────
 // formatting / utils
@@ -133,6 +134,40 @@ ok('vanity parts resolve a supplier (never blank)',
   // partial assembly (skip basin) -> 3 lines, still priced
   eq('vanity partial assembly skips missing parts',
     vanityAssemblyTotals({ cabinet: 'VC-750-WH', benchtop: 'VB-750-ST', tapware: '10330' }).lines.length, 3);
+}
+
+// stone benchtop auto-takeoff (Task 5)
+{
+  const t = benchTakeoff({ w: 750, d: 465, sinks: 1 });
+  approx('benchTakeoff area m² = w*d', t.area_m2, 0.349, 1e-3);
+  approx('benchTakeoff edge lm = front + 2 ends', t.edge_lm, 0.75 + 2 * 0.465, 1e-3);
+  eq('benchTakeoff sink cut-outs', t.sink_cuts, 1);
+  eq('benchTakeoff no waterfalls by default', t.waterfalls, 0);
+  // a waterfall end removes that end from edge lm and counts as 'ea'
+  const wf = benchTakeoff({ w: 1200, d: 600, waterfalls: 1, sinks: 1 });
+  approx('benchTakeoff waterfall edge = front + 1 end', wf.edge_lm, 1.2 + 1 * 0.6, 1e-3);
+  eq('benchTakeoff waterfall count', wf.waterfalls, 1);
+  // aggregate + map to existing rate keys
+  const sum = stoneTakeoffSum([{ w: 750, d: 465, sinks: 1 }, { w: 1200, d: 600, waterfalls: 1, undermount: 1 }]);
+  eq('stoneTakeoffSum counts benches', sum.benches, 2);
+  approx('stoneTakeoffSum total area', sum.area_m2, +(0.349 + 0.72).toFixed(2), 0.01);
+  eq('stoneTakeoffSum undermount cuts', sum.undermount_cuts, 1);
+  const keys = stoneTakeoffKeys(sum);
+  ok('takeoff maps onto stone_20 (area)', keys.stone_20 === sum.area_m2);
+  ok('takeoff maps onto stone_edge (lm)', keys.stone_edge === sum.edge_lm);
+  ok('takeoff maps onto stone_waterfall / cut-outs',
+    keys.stone_waterfall === 1 && keys.stone_cut_under === 1 && keys.stone_cut_sink === 1);
+  // every mapped key is a real Pricing-Setup rate key
+  const rateKeys = new Set();
+  app.RATE_DEFS.forEach(g => g.items.forEach(it => rateKeys.add(it.k)));
+  ok('all takeoff keys exist in RATE_DEFS', Object.keys(keys).every(k => rateKeys.has(k)));
+  // basin type drives the cut-out kind
+  const above = d3BenchSpec({ def: { id: 'vanity', bw: 750, bd: 465 }, components: { basin: 'VBSN-ABV' } });
+  eq('above-counter basin -> no benchtop cut-out', above.sinks + above.undermount, 0);
+  const under = d3BenchSpec({ def: { id: 'vanity', bw: 750, bd: 465 }, components: { basin: 'VBSN-UM' } });
+  eq('undermount basin -> 1 undermount cut-out', under.undermount, 1);
+  const dbl = d3BenchSpec({ def: { id: 'vanity', bw: 1200, bd: 465 }, sty: 'double', components: {} });
+  eq('double vanity -> 2 sink cut-outs', dbl.sinks, 2);
 }
 
 // ── AUDITS ──────────────────────────────────────────────────────────────────
