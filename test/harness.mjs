@@ -26,6 +26,7 @@ const CAPTURE = [
   'getBase', 'fmt', 'today', 'pad',
   'iT', 'qT', 'iP', 'autoMkup', 'priceFor',
   'supplierFor', 'estTotals',
+  'VANITY_PARTS', 'd3ItemSkus', 'vanityAssemblyTotals',
 ];
 
 // ── Browser / Three.js stubs ────────────────────────────────────────────────

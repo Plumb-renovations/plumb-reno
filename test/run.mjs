@@ -44,7 +44,7 @@ function fnBody(name) {
 
 const app = loadApp();
 const { CAT, BASE, getBase, fmt, today, pad, qT, iT, iP, priceFor, estTotals, supplierFor,
-        FIN_PROPS, D3_FINISHES, S } = app;
+        FIN_PROPS, D3_FINISHES, S, VANITY_PARTS, d3ItemSkus, vanityAssemblyTotals } = app;
 
 // ── TEST RIG ────────────────────────────────────────────────────────────────
 // formatting / utils
@@ -105,6 +105,34 @@ for (const [name] of D3_FINISHES) {
     ok('metalness in range: ' + name, fp.m >= 0 && fp.m <= 1, `m=${fp.m}`);
     ok('roughness in range: ' + name, fp.r >= 0 && fp.r <= 1, `r=${fp.r}`);
   }
+}
+
+// build-a-vanity (Task 4) — components separately priced + line-itemised
+ok('VANITY_PARTS defined', Array.isArray(VANITY_PARTS) && VANITY_PARTS.length >= 8);
+ok('vanity parts merged into BASE (cabinet resolves)', !!getBase('VC-750-WH'));
+ok('vanity parts merged into BASE (benchtop resolves)', !!getBase('VB-750-ST'));
+ok('vanity parts resolve a supplier (never blank)',
+  VANITY_PARTS.every(p => !!supplierFor({ sku: p.sku })));
+{
+  const comp = { cabinet: 'VC-750-WH', benchtop: 'VB-750-ST', basin: 'VBSN-ABV', tapware: '10330' };
+  const t = vanityAssemblyTotals(comp);
+  eq('vanity assembly = 4 line items', t.lines.length, 4);
+  const cab = getBase('VC-750-WH'), bt = getBase('VB-750-ST'), bs = getBase('VBSN-ABV'), tp = getBase('10330');
+  approx('vanity sellEx = sum of component sells', t.sellEx, cab.sell + bt.sell + bs.sell + tp.sell);
+  approx('vanity buy = sum of component buys (internal only)', t.buy, cab.buy + bt.buy + bs.buy + tp.buy);
+  approx('vanity gp = sell - buy', t.gp, t.sellEx - t.buy);
+  approx('vanity sellInc applies GST', t.sellInc, t.sellEx * (1 + S.settings.gst / 100));
+  ok('each line carries its own sell (separately priced)', t.lines.every(l => typeof l.sell === 'number'));
+  // d3ItemSkus expands an assembly into its component SKUs; plain items stay single
+  const skus = d3ItemSkus({ components: comp }).map(s => s.sku);
+  eq('d3ItemSkus expands assembly to 4 skus', skus.length, 4);
+  ok('d3ItemSkus keeps component order cabinet->tapware',
+    skus[0] === 'VC-750-WH' && skus[3] === '10330');
+  eq('d3ItemSkus plain item -> single sku', d3ItemSkus({ sku: '10330' }).length, 1);
+  eq('d3ItemSkus empty item -> none', d3ItemSkus({}).length, 0);
+  // partial assembly (skip basin) -> 3 lines, still priced
+  eq('vanity partial assembly skips missing parts',
+    vanityAssemblyTotals({ cabinet: 'VC-750-WH', benchtop: 'VB-750-ST', tapware: '10330' }).lines.length, 3);
 }
 
 // ── AUDITS ──────────────────────────────────────────────────────────────────

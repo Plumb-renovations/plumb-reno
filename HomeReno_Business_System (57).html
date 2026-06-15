@@ -469,6 +469,7 @@ body.d3client .d3-wrap{height:100vh}body.d3client .cnt{padding:0}
           </div>
           <button class="d3-fab" onclick="d3Products()">📚 Products</button>
           <button class="d3-fab" style="background:linear-gradient(135deg,var(--pur),var(--blue));color:#fff" onclick="d3AI()">🤖 AI Layouts</button>
+          <button class="d3-fab" style="background:linear-gradient(135deg,#0891b2,#2563eb);color:#fff" onclick="d3VanityBuilder()">🧩 Build Vanity</button>
           <button class="d3-fab" onclick="d3Light()" id="d3-light-btn">☀ Natural</button>
           <button class="d3-fab" onclick="d3Snap()">📸 Render</button>
           <button class="d3-fab" style="background:linear-gradient(135deg,var(--green),#0d8f5b);color:#fff" onclick="d3CompleteRender()">✅ Complete Render</button>
@@ -1068,6 +1069,8 @@ function loadState(){
   // custom (imported/added) products merged into BASE
   if(!S.custom)S.custom=[];
   S.custom.forEach(c=>{if(!BASE.find(b=>b.sku===c.sku))BASE.push({...c});});
+  // build-a-vanity component library -> first-class products (price/order/supplier/cost-hiding)
+  VANITY_PARTS.forEach(c=>{if(!BASE.find(b=>b.sku===c.sku))BASE.push({bar:'',img:'',...c});});
   // apply saved product edits (name/price/supplier/barcode/img overrides)
   if(!S.over)S.over={};
   // ── AUTO-LINK SUPPLIERS BY CATEGORY (so products are never blank out of the box) ──
@@ -1148,8 +1151,30 @@ const CAT_SUPPLIER={
   'Mirrors & Cabinets':'SU0001','Toilets & Bidets':'SU0001','Toilet Seats':'SU0001','Grab Rails & Care':'SU0001',
   'Showers':'SU0003',
   'Shower Screens & Glass':'SU0004',
-  'Water Filters':'SU0002'
+  'Water Filters':'SU0002',
+  // build-a-vanity component categories
+  'Vanity Cabinets':'SU0001','Vanity Benchtops':'SU0001','Vanity Basins':'SU0001'
 };
+// ── BUILD-A-VANITY COMPONENT LIBRARY ──
+// Separately-priced vanity parts. Merged into BASE at load so they price, order,
+// resolve a supplier and hide cost from clients exactly like catalogue products.
+// (Kept out of CAT so the 723-row catalogue integrity count is unaffected.)
+const VANITY_PARTS=[
+  // cabinets (surface finish chosen at build time)
+  {sku:'VC-600-WH', name:'Vanity Cabinet 600 Wall-Hung',  cat:'Vanity Cabinets', finish:'Timber',  qty:6, buy:240, sell:430, sup:'SU0001'},
+  {sku:'VC-750-WH', name:'Vanity Cabinet 750 Wall-Hung',  cat:'Vanity Cabinets', finish:'Timber',  qty:6, buy:280, sell:500, sup:'SU0001'},
+  {sku:'VC-900-FL', name:'Vanity Cabinet 900 Floor',      cat:'Vanity Cabinets', finish:'White',   qty:5, buy:340, sell:610, sup:'SU0001'},
+  {sku:'VC-1200-D', name:'Vanity Cabinet 1200 Double',    cat:'Vanity Cabinets', finish:'White',   qty:3, buy:520, sell:920, sup:'SU0001'},
+  // benchtops (stone)
+  {sku:'VB-600-ST', name:'Stone Benchtop 600 (20mm)',     cat:'Vanity Benchtops',finish:'Stone',   qty:8, buy:130, sell:260, sup:'SU0001'},
+  {sku:'VB-750-ST', name:'Stone Benchtop 750 (20mm)',     cat:'Vanity Benchtops',finish:'Stone',   qty:8, buy:160, sell:320, sup:'SU0001'},
+  {sku:'VB-900-ST', name:'Stone Benchtop 900 (20mm)',     cat:'Vanity Benchtops',finish:'Stone',   qty:6, buy:195, sell:390, sup:'SU0001'},
+  {sku:'VB-1200-ST',name:'Stone Benchtop 1200 (20mm)',    cat:'Vanity Benchtops',finish:'Stone',   qty:4, buy:260, sell:520, sup:'SU0001'},
+  // basins
+  {sku:'VBSN-ABV',  name:'Above-Counter Basin (Ceramic)', cat:'Vanity Basins',   finish:'White',   qty:10,buy:70,  sell:140, sup:'SU0001'},
+  {sku:'VBSN-UM',   name:'Under-Mount Basin (Ceramic)',   cat:'Vanity Basins',   finish:'White',   qty:10,buy:85,  sell:170, sup:'SU0001'},
+  {sku:'VBSN-INS',  name:'Inset Basin (Ceramic)',         cat:'Vanity Basins',   finish:'White',   qty:10,buy:60,  sell:120, sup:'SU0001'}
+];
 function autoLinkSuppliers(){
   // only fill blanks — never override a supplier already set (manual or via S.over).
   // Assigns the default supplier id by category; supplierFor() resolves the full record later.
@@ -2768,13 +2793,88 @@ function d3PlaceProduct(sku){
 }
 
 // ── LIVE QUOTE / MARGIN / STOCK BAR ──
+// expand a placed item into its priced SKUs. A build-a-vanity assembly carries
+// it.components {cabinet,benchtop,basin,tapware}; everything else is a single sku.
+const VANITY_PART_ORDER=['cabinet','benchtop','basin','tapware'];
+function d3ItemSkus(it){
+  if(it&&it.components){
+    return VANITY_PART_ORDER.map(k=>it.components[k]).filter(Boolean).map(sku=>({sku,qty:1}));
+  }
+  return (it&&it.sku)?[{sku:it.sku,qty:1}]:[];
+}
+// pure pricing for a vanity assembly — one product line per chosen component.
+function vanityAssemblyTotals(components){
+  const gstm=1+S.settings.gst/100;
+  const lines=[];let sellEx=0,buy=0;
+  VANITY_PART_ORDER.forEach(k=>{
+    const sku=components&&components[k];if(!sku)return;
+    const b=getBase(sku);if(!b)return;
+    lines.push({part:k,sku,name:b.name,cat:b.cat,qty:1,sell:b.sell,buy:b.buy});
+    sellEx+=b.sell;buy+=b.buy;
+  });
+  return {lines,sellEx,sellInc:sellEx*gstm,buy,gp:sellEx-buy};
+}
+// build-a-vanity: compose a vanity from separately-priced components and place it.
+// it.components drives both pricing (one line per part) and the rendered geometry.
+function buildVanity(opts){
+  opts=opts||{};
+  const comp={cabinet:opts.cabinet||null,benchtop:opts.benchtop||null,basin:opts.basin||null,tapware:opts.tapware||null};
+  const cab=comp.cabinet?getBase(comp.cabinet):null;
+  const tap=comp.tapware?getBase(comp.tapware):null;
+  const sty=comp.cabinet==='VC-900-FL'?'floor':comp.cabinet==='VC-1200-D'?'double':'wallhung';
+  const surf=cab&&cab.finish==='White'?'White':'Timber';
+  const fin=tap?(tap.finish||'Chrome'):'Chrome';
+  const it=d3Add('vanity',{sty,surf,fin,sku:'',quiet:true,wall:opts.wall!=null?opts.wall:0,off:opts.off!=null?opts.off:300});
+  if(it){it.sku=null;it.components=comp;if(typeof d3Select==='function')d3Select(it);d3Quote();}
+  return it;
+}
+function d3VanityBuilderOpts(cat){
+  return BASE.filter(b=>b.cat===cat).map(b=>`<option value="${b.sku}">${b.name} — ${fmt(b.sell)}</option>`).join('');
+}
+function d3VanityBuilderComponents(){
+  const v=id=>{const e=document.getElementById(id);return e&&e.value?e.value:null;};
+  return {cabinet:v('bv-cabinet'),benchtop:v('bv-benchtop'),basin:v('bv-basin'),tapware:v('bv-tapware')};
+}
+function d3VanityBuilderPrice(){
+  const t=vanityAssemblyTotals(d3VanityBuilderComponents());
+  const el=document.getElementById('bv-total');
+  if(el)el.textContent=fmt(t.sellInc)+' inc GST · '+t.lines.length+' line item'+(t.lines.length===1?'':'s');
+}
+function d3VanityBuilderAdd(){
+  const comp=d3VanityBuilderComponents();
+  if(!comp.cabinet&&!comp.benchtop&&!comp.basin&&!comp.tapware){alert('Pick at least one component.');return;}
+  buildVanity(comp);
+  const m=document.getElementById('d3-vanity-modal');if(m)m.remove();
+  if(typeof toast==='function')toast('Vanity added — components line-itemised on the quote.');
+}
+function d3VanityBuilder(){
+  const ex=document.getElementById('d3-vanity-modal');if(ex)ex.remove();
+  const sel=(id,label,cat)=>`<div style="margin-bottom:10px"><label style="display:block;color:#cdd9e4;font-size:11px;font-weight:700;margin-bottom:4px">${label}</label><select id="${id}" onchange="d3VanityBuilderPrice()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #2b3a4d;background:#16202c;color:#fff;font-family:inherit;font-size:12px"><option value="">— none —</option>${d3VanityBuilderOpts(cat)}</select></div>`;
+  const wrap=document.createElement('div');wrap.id='d3-vanity-modal';
+  wrap.style.cssText='position:absolute;inset:0;background:rgba(8,16,28,.82);z-index:20;display:flex;align-items:center;justify-content:center;padding:24px';
+  wrap.innerHTML=`<div style="max-width:520px;width:100%;background:#0e1722;border:1px solid #243245;border-radius:14px;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="color:#fff;font-size:17px;font-weight:800">🧩 Build a Vanity <span style="font-weight:400;font-size:11px;opacity:.6">— each part priced &amp; line-itemised</span></h3>
+      <button class="qb-close" onclick="document.getElementById('d3-vanity-modal').remove()">×</button>
+    </div>
+    ${sel('bv-cabinet','Cabinet','Vanity Cabinets')}
+    ${sel('bv-benchtop','Benchtop','Vanity Benchtops')}
+    ${sel('bv-basin','Basin','Vanity Basins')}
+    ${sel('bv-tapware','Tapware','Basin Mixers')}
+    <div id="bv-total" style="margin:12px 0;color:#5dd39e;font-weight:800;font-size:15px;text-align:right">$0.00 inc GST</div>
+    <button class="btn bp" style="width:100%" onclick="d3VanityBuilderAdd()">Add Vanity to Room</button>
+  </div>`;
+  $('d3-canvas').parentElement.appendChild(wrap);
+  ['bv-cabinet','bv-benchtop','bv-basin','bv-tapware'].forEach(id=>{const s=document.getElementById(id);if(s&&s.options.length>1)s.selectedIndex=1;});
+  d3VanityBuilderPrice();
+}
 function d3Quote(){
   const el=$('d3-qbar');if(!el)return;
-  const linked=D3.placed.filter(it=>it.sku);
+  const linked=D3.placed.filter(it=>d3ItemSkus(it).length);
   const gstm=1+S.settings.gst/100;
   let retail=0,cost=0,outCnt=0;
   const merged={};
-  linked.forEach(it=>{merged[it.sku]=(merged[it.sku]||0)+1;});
+  D3.placed.forEach(it=>d3ItemSkus(it).forEach(s=>{merged[s.sku]=(merged[s.sku]||0)+s.qty;}));
   Object.entries(merged).forEach(([sku,qty])=>{
     const b=getBase(sku);if(!b)return;
     retail+=b.sell*qty*gstm;cost+=b.buy*qty;
@@ -8312,11 +8412,11 @@ function d3Estimate(){
     const qty=q[it.k]!==undefined?q[it.k]:0;
     if(qty>0)lines.push({trade:g.g,k:it.k,label:it.l,unit:it.u,qty:+qty,rate:rateOf(it.k),auto:1});
   }));
-  // products
+  // products — expand build-a-vanity assemblies into one line per component
   const merged={};
-  D3.placed.filter(it=>it.sku).forEach(it=>{merged[it.sku]=(merged[it.sku]||0)+1;});
+  D3.placed.forEach(it=>d3ItemSkus(it).forEach(s=>{merged[s.sku]=(merged[s.sku]||0)+s.qty;}));
   const products=Object.entries(merged).map(([sku,qty])=>{const b=getBase(sku);return{sku,qty,name:b?b.name:sku,cat:b?b.cat:'',sell:b?b.sell:0,buy:b?b.buy:0};});
-  const unlinked=D3.placed.filter(it=>!it.sku).length;
+  const unlinked=D3.placed.filter(it=>!d3ItemSkus(it).length).length;
     const tnotes=JSON.parse(JSON.stringify(D3.tnotes||{}));
   let custom=[];
   Object.entries(tnotes).forEach(([tr,txt])=>{custom=custom.concat(smartLinesFor(tr,txt));});
