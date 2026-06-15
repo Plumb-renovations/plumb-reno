@@ -1855,16 +1855,31 @@ function initD3(){
 }
 
 function d3Env(){
-  const faces=[];
+  // Procedural studio/room environment for image-based lighting + metal reflections.
+  // Higher res + more tonal range than a flat gradient: bright sky, a crisp horizon
+  // highlight band (what chrome reflects), mid-tone side walls, warm dark floor.
+  const S=128,faces=[];
+  // cube face order: +X,-X,+Y,-Y,+Z,-Z
   for(let i=0;i<6;i++){
-    const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
-    const g=x.createLinearGradient(0,0,0,64);
-    if(i===2){g.addColorStop(0,'#dfeaf2');g.addColorStop(1,'#f6fafc');}
-    else if(i===3){g.addColorStop(0,'#7a6c5c');g.addColorStop(1,'#564c40');}
-    else{g.addColorStop(0,'#e8edf1');g.addColorStop(.6,'#c2cad1');g.addColorStop(1,'#8d97a0');}
-    x.fillStyle=g;x.fillRect(0,0,64,64);faces.push(c);
+    const c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');
+    if(i===2){ // +Y ceiling / sky — brightest, drives the key reflection
+      const g=x.createRadialGradient(S/2,S/2,4,S/2,S/2,S*0.75);
+      g.addColorStop(0,'#ffffff');g.addColorStop(.5,'#e9f1f8');g.addColorStop(1,'#cdd9e4');
+      x.fillStyle=g;x.fillRect(0,0,S,S);
+    }else if(i===3){ // -Y floor bounce — warm and dark for tonal range
+      const g=x.createLinearGradient(0,0,0,S);
+      g.addColorStop(0,'#6a5d4d');g.addColorStop(1,'#3c342b');
+      x.fillStyle=g;x.fillRect(0,0,S,S);
+    }else{ // side walls — gradient with a bright horizon band giving metals a highlight
+      const g=x.createLinearGradient(0,0,0,S);
+      g.addColorStop(0,'#d4dde6');g.addColorStop(.40,'#aab4be');
+      g.addColorStop(.52,'#f4f8fb');   // horizon highlight
+      g.addColorStop(.62,'#9aa3ad');g.addColorStop(1,'#5d5346');
+      x.fillStyle=g;x.fillRect(0,0,S,S);
+    }
+    faces.push(c);
   }
-  const t=new _3.CubeTexture(faces);t.needsUpdate=true;
+  const t=new _3.CubeTexture(faces);t.encoding=_3.sRGBEncoding;t.needsUpdate=true;
   return t;
 }
 
@@ -1876,7 +1891,7 @@ function d3Setup(){
   D3.ren=new _3.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
   D3.ren.setSize(c.clientWidth,c.clientHeight);D3.ren.setPixelRatio(window.devicePixelRatio||1);
   D3.ren.shadowMap.enabled=true;D3.ren.shadowMap.type=_3.PCFSoftShadowMap;
-  D3.ren.toneMapping=_3.ACESFilmicToneMapping;D3.ren.toneMappingExposure=1.05;
+  D3.ren.toneMapping=_3.ACESFilmicToneMapping;D3.ren.toneMappingExposure=0.95;
   D3.ren.outputEncoding=_3.sRGBEncoding;
   c.appendChild(D3.ren.domElement);
   D3.ray=new _3.Raycaster();D3.mouse=new _3.Vector2();
@@ -1933,14 +1948,22 @@ function d3Lights(){
   const g=D3.lightGrp;while(g.children.length)g.remove(g.children[0]);
   const W=(D3.W||3000)/1000,L=(D3.L||2400)/1000,H=(D3.H||2400)/1000;
   if(D3.light==='natural'){
-    g.add(new _3.HemisphereLight(0xeaf2fa,0x55483a,.65));
+    // gentle sky/ground fill so shadows aren't black, but low enough to keep contrast
+    g.add(new _3.HemisphereLight(0xeaf2fa,0x6b5847,.42));
+    g.add(new _3.AmbientLight(0xffffff,.10));
     const win=D3.open.find(o=>o.kind==='window');
-    const sun=new _3.DirectionalLight(0xfff2dc,1.15);
+    // soft key (sun) — stronger than the fill, casts the grounding shadows
+    const sun=new _3.DirectionalLight(0xfff2dc,2.4);
     if(win){const p=d3WallPoint(win.wall,win.off+win.w/2,(win.sill||1500)+win.h/2,600);sun.position.set(p.x,p.y+0.6,p.z);}
     else sun.position.set(W*0.8,H*1.4,L*0.9);
-    sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
-    sun.shadow.camera.left=-4;sun.shadow.camera.right=4;sun.shadow.camera.top=4;sun.shadow.camera.bottom=-4;
+    sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+    sun.shadow.camera.left=-Math.max(W,L);sun.shadow.camera.right=Math.max(W,L);
+    sun.shadow.camera.top=Math.max(W,L);sun.shadow.camera.bottom=-Math.max(W,L);
+    sun.shadow.camera.near=0.1;sun.shadow.camera.far=Math.max(W,L)*4;
+    sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.02;sun.shadow.radius=4;
     g.add(sun);
+    // gentle opposite fill (no shadow) to round out the dark side
+    const fill=new _3.DirectionalLight(0xdfe8f2,.45);fill.position.set(-W*0.7,H*0.9,-L*0.6);g.add(fill);
   }else if(D3.light==='led'){
     g.add(new _3.HemisphereLight(0xf2f5f8,0x4a4138,.35));
     for(let i=0;i<3;i++){const p=new _3.PointLight(0xfff0d8,.5,7);p.position.set((i-1)*W*.3,H-.12,0);p.castShadow=i===1;g.add(p);}
