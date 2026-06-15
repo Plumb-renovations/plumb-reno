@@ -1638,6 +1638,7 @@ function c3l(r,h,mat,seg){const m=new _3.Mesh(new _3.CylinderGeometry(r,r,h,seg|
 function rbx(w,h,d,mat,rad){ // rounded/chamfered box via slight bevel illusion using grouped boxes
   const g=new _3.Group();const m=new _3.Mesh(new _3.BoxGeometry(w,h,d),mat);m.castShadow=true;m.receiveShadow=true;g.add(m);return g;}
 function cyl(r,h,mat,seg){const m=new _3.Mesh(new _3.CylinderGeometry(r,r,h,seg||32),mat);m.castShadow=true;return m;}
+function tcyl(rt,rb,h,mat,seg){const m=new _3.Mesh(new _3.CylinderGeometry(rt,rb,h,seg||24),mat);m.castShadow=true;return m;}
 function torus(r,t,mat){const m=new _3.Mesh(new _3.TorusGeometry(r,t,12,32),mat);m.castShadow=true;return m;}
 function sph(r,mat){const m=new _3.Mesh(new _3.SphereGeometry(r,24,18),mat);m.castShadow=true;return m;}
 // ── realistic tapware geometry ──
@@ -1646,9 +1647,9 @@ function tube(points,radius,mat,seg){
   const g=new _3.Mesh(new _3.TubeGeometry(curve,seg||24,radius,12,false),mat);g.castShadow=true;return g;
 }
 function lever(mat,len){len=len||0.085;const g=new _3.Group();
-  const base=cyl(.013,.022,mat,20);g.add(base);
-  const arm=new _3.Mesh(new _3.BoxGeometry(.012,.012,len),mat);arm.position.set(0,.02,len/2-.01);arm.castShadow=true;g.add(arm);
-  const cap=cyl(.009,.014,mat,16);cap.position.set(0,.02,len-.02);cap.rotation.x=Math.PI/2;g.add(cap);
+  const base=tcyl(.011,.014,.022,mat,20);g.add(base);
+  const arm=new _3.Mesh(new _3.BoxGeometry(.011,.01,len),mat);arm.position.set(0,.02,len/2-.01);arm.castShadow=true;g.add(arm);
+  const tip=sph(.011,mat);tip.scale.set(1,.65,1.35);tip.position.set(0,.02,len-.012);g.add(tip);
   return g;}
 // type: 'gooseneck' (tall curved basin), 'basin' (mid curved), 'wall' (wall spout+mixer), 'bath' (low spout)
 function makeMixer(fin,type){
@@ -1665,23 +1666,29 @@ function makeMixer(fin,type){
     const flange=cyl(.022,.012,M,20);flange.rotation.x=Math.PI/2;g.add(flange);
     return g;
   }
-  // deck-mounted body
+  // deck-mounted body — escutcheon plate + tapered body for a finished deck join
   const baseH=type==='bath'?.04:.05;
-  const base=cyl(.024,baseH,M,28);base.position.y=baseH/2;g.add(base);
+  const esc=cyl(.03,.006,M,30);esc.position.y=.003;g.add(esc);
+  const base=tcyl(.02,.024,baseH,M,30);base.position.y=baseH/2+.005;g.add(base);
   if(type==='gooseneck'){
-    // tall body then high arching gooseneck
-    const col=cyl(.018,.16,M,24);col.position.y=.13;g.add(col);
-    const arc=tube([[0,.21,0],[0,.27,.0],[.0,.30,.04],[0,.30,.11],[0,.26,.15],[0,.20,.16]],.013,M,28);g.add(arc);
-    const aer=cyl(.012,.02,M,18);aer.position.set(0,.195,.16);g.add(aer);
-    const lv=lever(M,.08);lv.position.set(.034,.2,.01);lv.rotation.y=-.2;g.add(lv);
+    // tall tapered body, collar, then high arching gooseneck with an aerator tip
+    const col=tcyl(.016,.02,.16,M,28);col.position.y=.135;g.add(col);
+    const collar=cyl(.0195,.012,M,28);collar.position.y=.205;g.add(collar);
+    const arc=tube([[0,.21,0],[0,.27,.0],[.0,.30,.04],[0,.30,.11],[0,.26,.15],[0,.20,.16]],.013,M,30);g.add(arc);
+    const tip=tcyl(.015,.013,.012,M,22);tip.position.set(0,.198,.16);g.add(tip);
+    const aer=cyl(.0115,.014,M,18);aer.position.set(0,.187,.16);g.add(aer);
+    const lv=lever(M,.082);lv.position.set(.032,.205,.005);lv.rotation.y=-.22;g.add(lv);
   } else if(type==='basin'){
-    const col=cyl(.018,.1,M,24);col.position.y=.09;g.add(col);
-    const arc=tube([[0,.14,0],[0,.19,.02],[.0,.205,.07],[0,.18,.12],[0,.135,.135]],.012,M,24);g.add(arc);
-    const aer=cyl(.011,.018,M,16);aer.position.set(0,.125,.135);g.add(aer);
-    const lv=lever(M,.07);lv.position.set(.03,.13,.0);lv.rotation.y=-.2;g.add(lv);
+    const col=tcyl(.016,.019,.1,M,28);col.position.y=.095;g.add(col);
+    const collar=cyl(.018,.01,M,24);collar.position.y=.143;g.add(collar);
+    const arc=tube([[0,.14,0],[0,.19,.02],[.0,.205,.07],[0,.18,.12],[0,.135,.135]],.012,M,26);g.add(arc);
+    const tip=tcyl(.013,.011,.01,M,20);tip.position.set(0,.128,.135);g.add(tip);
+    const aer=cyl(.0095,.012,M,16);aer.position.set(0,.119,.135);g.add(aer);
+    const lv=lever(M,.072);lv.position.set(.03,.135,.005);lv.rotation.y=-.22;g.add(lv);
   } else { // bath spout (low, forward)
-    const spout=tube([[0,.04,0],[0,.06,.05],[.0,.06,.12],[0,.045,.17]],.014,M,20);g.add(spout);
-    const lv=lever(M,.07);lv.position.set(.04,.04,0);g.add(lv);
+    const spout=tube([[0,.04,0],[0,.06,.05],[.0,.06,.12],[0,.045,.17]],.014,M,22);g.add(spout);
+    const tip=cyl(.014,.012,M,20);tip.position.set(0,.045,.17);tip.rotation.x=Math.PI/2;g.add(tip);
+    const lv=lever(M,.072);lv.position.set(.042,.045,0);g.add(lv);
   }
   return g;
 }
