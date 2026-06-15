@@ -1,0 +1,5 @@
+{
+  "catalogue": 723,
+  "uniqueSkus": 666,
+  "note": "catalogue = total CAT rows; uniqueSkus = distinct SKUs (some products share a SKU across finishes/variants). Update both when Task 2 adds/removes products."
+}

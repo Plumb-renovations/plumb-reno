@@ -1,0 +1,12 @@
+{
+  "name": "homereno-business-system",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Single-file renovation business system — test harness, audits and integrity check.",
+  "scripts": {
+    "syntax": "node test/syntax.mjs",
+    "test": "node test/run.mjs",
+    "check": "node test/syntax.mjs && node test/run.mjs"
+  }
+}
