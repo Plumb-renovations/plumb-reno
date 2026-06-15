@@ -2061,18 +2061,22 @@ function d3WallPoint(w,offmm,elevmm,outmm){
 function d3Tex(set,faceWm,faceHm){
   const px=512,cv=document.createElement('canvas');cv.width=cv.height=px;
   const x=cv.getContext('2d');
-  x.fillStyle=set.grout;x.fillRect(0,0,px,px);
+  // recessed grout: noticeably darker than the tile so joints actually read
+  const groutCol=shade(set.grout,-24);
+  x.fillStyle=groutCol;x.fillRect(0,0,px,px);
   let tw=px*set.sz[0]/1000,th=px*set.sz[1]/1000;
   if(set.lay==='vert'){const t=tw;tw=th;th=t;}
-  const gap=2.4;
+  const gap=3.4;
   function tile(xx,yy,w,h,rot){
     x.save();
     const v=(Math.random()-.5)*14;
     x.translate(xx+w/2,yy+h/2);if(rot)x.rotate(rot);
+    const iw=w-gap,ih=h-gap,L=-w/2+gap/2,T=-h/2+gap/2;
     x.fillStyle=shade(set.col,v);
-    x.fillRect(-w/2+gap/2,-h/2+gap/2,w-gap,h-gap);
-    x.fillStyle='rgba(0,0,0,.07)';
-    x.fillRect(-w/2+gap/2,h/2-gap/2-1.5,w-gap,1.5);
+    x.fillRect(L,T,iw,ih);
+    // bevelled edges: light top/left catch, dark bottom/right falloff -> faux relief
+    x.fillStyle='rgba(255,255,255,.28)';x.fillRect(L,T,iw,1.4);x.fillRect(L,T,1.4,ih);
+    x.fillStyle='rgba(0,0,0,.14)';x.fillRect(L,T+ih-1.6,iw,1.6);x.fillRect(L+iw-1.6,T,1.6,ih);
     x.restore();
   }
   function shade(hex,amt){
@@ -2091,14 +2095,14 @@ function d3Tex(set,faceWm,faceHm){
     x.restore();
   }else if(set.lay==='fish'){
     const r=Math.max(26,tw*0.55);
-    x.fillStyle=set.grout;x.fillRect(0,0,px,px);
+    x.fillStyle=groutCol;x.fillRect(0,0,px,px);
     for(let row=-1,yy=-r*0.2;yy<px+r;row++,yy+=r*0.82){
       const offx=(row%2)?r:0;
       for(let xx=-r;xx<px+2*r;xx+=2*r){
         const v=(Math.random()-.5)*12;
         x.beginPath();x.arc(xx+offx,yy,r-1.4,0,Math.PI*2);
         x.fillStyle=shade(set.col,v);x.fill();
-        x.strokeStyle=set.grout;x.lineWidth=2.2;x.stroke();
+        x.strokeStyle=groutCol;x.lineWidth=3.2;x.stroke();
       }
     }
   }else{
