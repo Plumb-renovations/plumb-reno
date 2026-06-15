@@ -2417,12 +2417,33 @@ function d3PlaceWall(it){
   it.grp.position.set(p2.x,p2.y,p2.z);
   it.grp.rotation.y=s.ry+it.rot;
 }
+// soft contact shadow (fake AO grounding) — a radial dark sprite on the floor
+// under each free-standing fixture. Cheap, no postprocessing, reads as occlusion.
+let _csTex=null;
+function d3ContactTex(){
+  if(_csTex)return _csTex;
+  const s=128,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
+  const g=x.createRadialGradient(s/2,s/2,3,s/2,s/2,s/2);
+  g.addColorStop(0,'rgba(0,0,0,.5)');g.addColorStop(.55,'rgba(0,0,0,.2)');g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,s,s);
+  _csTex=new _3.CanvasTexture(c);return _csTex;
+}
+function d3ContactShadow(it){
+  if(it._cshadow||!it.def||it.def.wall||it.def.ceil)return;
+  // def dims are in mm but fixture geometry is authored in metres -> convert.
+  const w=((it.def.bw||500)/1000)*1.35,d=((it.def.bd||500)/1000)*1.35;
+  const m=new _3.Mesh(new _3.PlaneGeometry(w,d),
+    new _3.MeshBasicMaterial({map:d3ContactTex(),transparent:true,depthWrite:false,opacity:.7}));
+  m.rotation.x=-Math.PI/2;m.position.y=.004;m.renderOrder=2;
+  it._cshadow=m;it.grp.add(m);
+}
 function d3PlaceFloor(it){
   d3Scale(it);
   it.x=Math.min(D3.W-it.dims.w/2,Math.max(it.dims.w/2,it.x));
   it.z=Math.min(D3.L-it.dims.d/2,Math.max(it.dims.d/2,it.z));
   it.grp.position.set(-D3.W/2000+it.x/1000,0,-D3.L/2000+it.z/1000);
   it.grp.rotation.y=it.rot;
+  d3ContactShadow(it);
 }
 function d3PlaceCeil(it){
   d3Scale(it);
