@@ -2627,9 +2627,26 @@ function d3LinkedLbl(){
   const stk=b?getStk(b.sku):0;
   $('d3p-linked').innerHTML=b?('🔗 '+b.name+' — <b>'+fmt(b.sell*(1+S.settings.gst/100))+'</b> · '+(stk>0?stk+' in stock':'<span style="color:var(--red)">out of stock</span>')):'<span style="color:var(--g400);font-weight:400">No stock item linked</span>';
 }
+// Imported GLB/GLTF/OBJ models have no def.make() to rebuild — re-material their
+// meshes in place from D3_FINISHES/FIN_PROPS so a client can preview finishes.
+// finish===null restores each mesh's original imported material.
+function isImportedModel(it){return !!(it&&(it.asset||!it.def||typeof it.def.make!=='function'));}
+function applyFinishToModel(it,finish){
+  if(!it||!it.grp)return;
+  const mat=finish?d3Metal(finish):null;
+  if(mat)mat.side=_3.DoubleSide;   // imported meshes often have inconsistent winding
+  it.grp.traverse(m=>{
+    if(!m.isMesh)return;
+    if(m.userData._origMat===undefined)m.userData._origMat=m.material; // remember the import's own material
+    m.material=finish?mat:m.userData._origMat;
+    m.castShadow=true;m.receiveShadow=true;
+  });
+  it.fin=finish||it.fin;
+}
 function d3Finish(n){
   const it=D3.sel;if(!it)return;
   it.fin=n;
+  if(isImportedModel(it)){applyFinishToModel(it,n);d3Select(it);return;}
   const variant=it.def.styles?(it.sty||null):(it.scr||null);
   const old=it.grp,ng=it.def.make(n,variant,it.surf||null);
   ng.position.copy(old.position);ng.rotation.copy(old.rotation);ng.scale.copy(old.scale);

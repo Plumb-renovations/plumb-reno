@@ -210,6 +210,27 @@ ok('vanity parts resolve a supplier (never blank)',
   eq('vanity not counted as cabinetry', Object.keys(cabinetryTakeoff([{ def: { id: 'vanity', bw: 900 } }])).length, 0);
 }
 
+// finish-swap for imported GLB/GLTF/OBJ models (Task 7)
+{
+  const { isImportedModel, applyFinishToModel, loadThree } = app;
+  // imported assets (or anything without a def.make) re-material; real fittings rebuild
+  ok('asset item is treated as imported', isImportedModel({ asset: {}, def: {} }) === true);
+  ok('def without make() is treated as imported', isImportedModel({ def: {} }) === true);
+  ok('fitting with def.make() is NOT imported', isImportedModel({ def: { id: 'vanity', make: () => {} } }) === false);
+  ok('null item safe (not a model, no throw)', isImportedModel(null) === false);
+  // re-material bookkeeping: remember the import's own material, swap, restore
+  loadThree(() => {});                       // sets the app's _3 so material helpers work
+  const mesh = { isMesh: true, userData: {}, material: 'IMPORTED', castShadow: false, receiveShadow: false };
+  const it = { asset: {}, grp: { traverse: cb => cb(mesh) }, fin: 'Chrome' };
+  applyFinishToModel(it, 'Brushed Brass');
+  ok('finish swap replaces the mesh material', mesh.material !== 'IMPORTED');
+  eq('original imported material remembered', mesh.userData._origMat, 'IMPORTED');
+  ok('finish swap enables shadows on imported mesh', mesh.castShadow === true);
+  eq('item finish updated', it.fin, 'Brushed Brass');
+  applyFinishToModel(it, null);              // restore
+  eq('restore returns the imported material', mesh.material, 'IMPORTED');
+}
+
 // ── AUDITS ──────────────────────────────────────────────────────────────────
 const auditResults = [];
 function audit(name, problems) {
